@@ -787,7 +787,7 @@
                     color: selectedColor,
                     character: selectedCharacter,
                     isMatch: selectedColor === selectedCharacter, // 颜色和汉字是否相同
-                    correctAnswer: selectedCharacter // 正确答案是汉字
+                    correctAnswer: selectedColor // 正确答案是颜色
                 };
                 
                 this.renderQuestion();
@@ -826,9 +826,9 @@
                 } else {
                     // 颜色和汉字不同：包含正确答案、随机颜色、随机汉字，加一个干扰项
                     options = [
-                        this.currentQuestion.correctAnswer, // 正确答案（汉字）
-                        this.currentQuestion.color, // 随机颜色
-                        COLORS[Math.floor(Math.random() * COLORS.length)] // 随机汉字
+                        this.currentQuestion.correctAnswer, // 正确答案（颜色）
+                        this.currentQuestion.character, // 随机汉字
+                        COLORS[Math.floor(Math.random() * COLORS.length)] // 随机颜色
                     ];
                     while (options.length < 4) {
                         const randomOption = COLORS[Math.floor(Math.random() * COLORS.length)];
