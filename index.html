@@ -981,9 +981,6 @@
                 this.answeredQuestions++;
                 document.getElementById('moveCount').textContent = this.moveCount;
                 
-                // 首次有效移动时启动计时
-                this.startTimerIfNeeded();
-                
                 // 检查答案是否正确
                 const isCorrect = selectedOption === this.currentQuestion.correctAnswer;
                 
@@ -1107,6 +1104,9 @@
                 // 隐藏开始屏幕，显示游戏界面
                 document.getElementById('gameStartScreen').style.display = 'none';
                 document.getElementById('gameInterface').style.display = 'block';
+                
+                // 开始计时
+                this.startTimerIfNeeded();
                 
                 // 生成第一道题目
                 this.generateNewQuestion();
