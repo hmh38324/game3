@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>对对碰游戏3</title>
+    <title>色彩陷阱游戏</title>
     <style>
         * {
             margin: 0;
@@ -62,18 +62,73 @@
             color: #666;
         }
 
-        .puzzle-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(4, 1fr);
-            gap: 5px;
+        .question-container {
             width: 600px;
-            height: 600px;
             margin: 0 auto 30px;
             border: 3px solid #333;
             border-radius: 10px;
             background: #f0f0f0;
-            padding: 10px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .question-display {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: white;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .option-button {
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-button:hover {
+            background: #e0e0e0;
+            transform: scale(1.02);
+        }
+
+        .option-button.selected {
+            background: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
+
+        .option-button.correct {
+            background: #4CAF50;
+            color: white;
+            border-color: #45a049;
+        }
+
+        .option-button.wrong {
+            background: #f44336;
+            color: white;
+            border-color: #da190b;
         }
 
 
@@ -485,9 +540,8 @@
                 align-items: center;
             }
             
-            .puzzle-container {
+            .question-container {
                 width: 400px;
-                height: 400px;
             }
             
             h1 {
@@ -508,9 +562,8 @@
                 align-items: center;
             }
             
-            .puzzle-container {
+            .question-container {
                 width: 320px;
-                height: 320px;
             }
             
             h1 {
@@ -537,9 +590,9 @@
 </head>
 <body>
     <div class="game-container">
-        <h1>🎯 利群对对碰3</h1>
+        <h1>🎨 色彩陷阱</h1>
         <div class="game-info">
-            <p>点击翻开卡片，找到所有8对相同的图片！每次只能翻开2张牌！</p>
+            <p>观察有颜色的汉字，选择正确的答案！答对6道题目即可完成游戏！</p>
         </div>
         
         <div class="controls">
@@ -550,11 +603,16 @@
         
         <div class="game-content">
             <div class="puzzle-section">
-                <div class="puzzle-container" id="puzzleContainer">
-                    <!-- 图片块将通过JavaScript动态生成 -->
+                <div class="question-container" id="questionContainer">
+                    <div class="question-display" id="questionDisplay">
+                        <!-- 题目将在这里显示 -->
+                    </div>
+                    <div class="options-container" id="optionsContainer">
+                        <!-- 选项按钮将在这里生成 -->
+                    </div>
                 </div>
                 <div class="score">
-                    <p>点击次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   已配对: <span id="matchedCount">0</span>/8 对   当前用户: <span id="userInfo"></span></p>
+                    <p>答题次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   已答对: <span id="matchedCount">0</span>/6 题   当前用户: <span id="userInfo"></span></p>
                 </div>
             </div>
             
@@ -598,8 +656,8 @@
     <div class="overlay" id="overlay"></div>
     <div class="win-message" id="winMessage">
         <h2>🎉 恭喜完成！</h2>
-        <p>你成功消除了所有图片！</p>
-        <p>总点击次数: <span id="finalMoves">0</span></p>
+        <p>你成功答对了所有6道题目！</p>
+        <p>总答题次数: <span id="finalMoves">0</span></p>
         <p>总用时: <span id="finalTime">00:00</span></p>
         <button onclick="closeWinMessage()">再玩一次</button>
     </div>
@@ -645,15 +703,28 @@
     <script>
         // Cloudflare Worker API 基础地址
         const WORKER_BASE_URL = 'https://game3-worker.hmh38324.workers.dev';
-        class PuzzleGame {
+        
+        // 颜色和汉字选项
+        const COLORS = ['红', '棕', '橙', '绿', '黄', '紫', '蓝', '黑'];
+        const COLOR_VALUES = {
+            '红': '#ff0000',
+            '棕': '#8B4513',
+            '橙': '#ffa500',
+            '绿': '#008000',
+            '黄': '#ffff00',
+            '紫': '#800080',
+            '蓝': '#0000ff',
+            '黑': '#000000'
+        };
+        
+        class ColorTrapGame {
             constructor() {
-                this.pieces = [];
+                this.currentQuestion = null;
                 this.moveCount = 0;
                 this.isGameWon = false;
-                this.selectedPieces = []; // 存储选中的图片索引
-                this.matchedPairs = 0; // 已匹配的对数
-                this.flippedCards = []; // 存储已翻开的卡片
-                this.isFlipping = false; // 是否正在翻转动画中
+                this.correctAnswers = 0; // 已答对的题目数
+                this.answeredQuestions = 0; // 已答题数
+                this.isAnswering = false; // 是否正在答题中
                 // 尝试与计时状态
                 this.hasAttemptRecorded = false; // 是否已记录开局
                 this.hasTimerRunning = false; // 是否已开始计时
@@ -667,20 +738,6 @@
                 this.leaderboardVersion = 2; // schema version
                 this.currentAttemptId = null;
                 this.maxAttempts = 3;
-                // 使用pic文件夹中的8个图片，每个图片出现2次
-                this.pieceImages = [
-                    'pic/1.png', 'pic/2.png', 'pic/3.png', 'pic/4.png',
-                    'pic/5.png', 'pic/6.png', 'pic/7.png', 'pic/8.png',
-                    'pic/1.png', 'pic/2.png', 'pic/3.png', 'pic/4.png',
-                    'pic/5.png', 'pic/6.png', 'pic/7.png', 'pic/8.png'
-                ];
-                // 卡牌背面背景图片
-                this.cardBackgrounds = [];
-                for (let row = 0; row < 4; row++) {
-                    for (let col = 0; col < 4; col++) {
-                        this.cardBackgrounds.push(`card_backgrounds/card_bg_${row}_${col}.png`);
-                    }
-                }
                 this.loadPeopleData();
                 // Worker-only 模式，无 Gist
             }
@@ -689,7 +746,7 @@
                 try {
                     const response = await fetch('people.json');
                     this.peopleData = await response.json();
-                    this.preloadImages();
+                    this.init();
                 } catch (error) {
                     console.error('加载人员数据失败:', error);
                     // 使用默认数据
@@ -698,160 +755,109 @@
                         {"工号": "2", "姓名": "李四"},
                         {"工号": "3", "姓名": "王五"}
                     ];
-                    this.preloadImages();
-                }
-            }
-
-            async preloadImages() {
-                // 显示加载提示
-                this.showLoadingScreen();
-                
-                const allImages = [...this.pieceImages, ...this.cardBackgrounds];
-                let loadedCount = 0;
-                const totalCount = allImages.length;
-                
-                const loadPromises = allImages.map((src, index) => {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            loadedCount++;
-                            const progress = (loadedCount / totalCount) * 100;
-                            this.updateLoadingProgress(progress);
-                            resolve(src);
-                        };
-                        img.onerror = () => {
-                            loadedCount++;
-                            const progress = (loadedCount / totalCount) * 100;
-                            this.updateLoadingProgress(progress);
-                            reject(new Error(`Failed to load ${src}`));
-                        };
-                        img.src = src;
-                    });
-                });
-                
-                try {
-                    await Promise.all(loadPromises);
-                    console.log('所有图片预加载完成');
-                    // 延迟一下让用户看到100%进度
-                    setTimeout(() => {
-                        this.hideLoadingScreen();
-                        this.init();
-                    }, 300);
-                } catch (error) {
-                    console.error('图片预加载失败:', error);
-                    // 即使预加载失败也继续游戏
-                    this.hideLoadingScreen();
                     this.init();
                 }
             }
 
-            updateLoadingProgress(progress) {
-                const progressBar = document.getElementById('loadingProgress');
-                if (progressBar) {
-                    progressBar.style.width = `${Math.round(progress)}%`;
-                }
-            }
-
-            showLoadingScreen() {
-                const loadingDiv = document.createElement('div');
-                loadingDiv.id = 'loadingScreen';
-                loadingDiv.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(255, 255, 255, 0.95);
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    z-index: 9999;
-                    font-family: Arial, sans-serif;
-                `;
-                loadingDiv.innerHTML = `
-                    <div style="font-size: 24px; color: #333; margin-bottom: 20px;">🎯 利群对对碰3</div>
-                    <div style="font-size: 18px; color: #666; margin-bottom: 30px;">正在加载图片...</div>
-                    <div style="width: 200px; height: 4px; background: #f0f0f0; border-radius: 2px; overflow: hidden;">
-                        <div id="loadingProgress" style="width: 0%; height: 100%; background: linear-gradient(45deg, #667eea, #764ba2); transition: width 0.3s ease;"></div>
-                    </div>
-                `;
-                document.body.appendChild(loadingDiv);
-            }
-
-            hideLoadingScreen() {
-                const loadingDiv = document.getElementById('loadingScreen');
-                if (loadingDiv) {
-                    loadingDiv.remove();
-                }
-            }
-
             init() {
-                this.createPuzzle();
-                this.renderPuzzle();
+                this.createQuestionInterface();
                 this.updateUserInfo();
-                // 首次进入游戏时自动打乱
+                // 首次进入游戏时生成第一道题目
                 setTimeout(() => {
-                    this.shufflePuzzle();
+                    this.generateNewQuestion();
                 }, 500); // 延迟500ms确保界面完全加载
             }
 
-            createPuzzle() {
-                const container = document.getElementById('puzzleContainer');
-                container.innerHTML = '';
+            createQuestionInterface() {
+                const questionDisplay = document.getElementById('questionDisplay');
+                const optionsContainer = document.getElementById('optionsContainer');
                 
-                for (let i = 0; i < 16; i++) {
-                    const piece = document.createElement('div');
-                    piece.className = 'puzzle-piece';
-                    piece.dataset.index = i;
-                    
-                    // 为每个图片块添加点击事件监听器
-                    piece.addEventListener('click', () => this.selectPiece(i));
-                    
-                    container.appendChild(piece);
-                }
+                // 清空现有内容
+                questionDisplay.innerHTML = '';
+                optionsContainer.innerHTML = '';
             }
 
-            renderPuzzle() {
-                const pieces = document.querySelectorAll('.puzzle-piece');
-                pieces.forEach((piece, index) => {
-                    // 重置所有状态
-                    piece.classList.remove('flipped', 'selected', 'matched', 'card-back');
-                    piece.style.backgroundImage = '';
-                    piece.textContent = '';
-                    
-                    if (this.pieceImages[index]) {
-                        // 如果卡片已匹配，显示图片并标记为已匹配
-                        if (this.flippedCards.includes(index) || this.selectedPieces.includes(index)) {
-                            piece.style.backgroundImage = `url(${this.pieceImages[index]})`;
-                            piece.classList.add('flipped');
-                        } else {
-                            // 显示卡片背面，设置对应的背景图片
-                            piece.classList.add('card-back');
-                            const row = Math.floor(index / 4);
-                            const col = index % 4;
-                            piece.style.backgroundImage = `url('card_backgrounds/card_bg_${row}_${col}.png')`;
-                            piece.style.transform = 'rotateY(0deg)';
+            generateNewQuestion() {
+                // 随机选择颜色和汉字
+                const selectedColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+                const selectedCharacter = COLORS[Math.floor(Math.random() * COLORS.length)];
+                
+                // 创建题目对象
+                this.currentQuestion = {
+                    color: selectedColor,
+                    character: selectedCharacter,
+                    isMatch: selectedColor === selectedCharacter, // 颜色和汉字是否相同
+                    correctAnswer: selectedCharacter // 正确答案是汉字
+                };
+                
+                this.renderQuestion();
+            }
+
+            renderQuestion() {
+                const questionDisplay = document.getElementById('questionDisplay');
+                const optionsContainer = document.getElementById('optionsContainer');
+                
+                // 显示有颜色的汉字
+                const coloredCharacter = document.createElement('span');
+                coloredCharacter.textContent = this.currentQuestion.character;
+                coloredCharacter.style.color = COLOR_VALUES[this.currentQuestion.color];
+                questionDisplay.innerHTML = '';
+                questionDisplay.appendChild(coloredCharacter);
+                
+                // 生成选项
+                this.generateOptions();
+            }
+
+            generateOptions() {
+                const optionsContainer = document.getElementById('optionsContainer');
+                optionsContainer.innerHTML = '';
+                
+                let options = [];
+                
+                if (this.currentQuestion.isMatch) {
+                    // 颜色和汉字相同：包含正确答案加三个干扰项
+                    options = [this.currentQuestion.correctAnswer];
+                    while (options.length < 4) {
+                        const randomOption = COLORS[Math.floor(Math.random() * COLORS.length)];
+                        if (!options.includes(randomOption)) {
+                            options.push(randomOption);
                         }
-                        
-                        // 如果已匹配，添加匹配状态
-                        if (!this.pieceImages[index]) {
-                            piece.classList.add('matched');
+                    }
+                } else {
+                    // 颜色和汉字不同：包含正确答案、随机颜色、随机汉字，加一个干扰项
+                    options = [
+                        this.currentQuestion.correctAnswer, // 正确答案（汉字）
+                        this.currentQuestion.color, // 随机颜色
+                        COLORS[Math.floor(Math.random() * COLORS.length)] // 随机汉字
+                    ];
+                    while (options.length < 4) {
+                        const randomOption = COLORS[Math.floor(Math.random() * COLORS.length)];
+                        if (!options.includes(randomOption)) {
+                            options.push(randomOption);
                         }
-                    } else {
-                        // 已消除的卡片
-                        piece.classList.add('matched');
                     }
-                    
-                    // 更新选中状态
-                    if (this.selectedPieces.includes(index)) {
-                        piece.classList.add('selected');
-                    }
+                }
+                
+                // 打乱选项顺序
+                for (let i = options.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [options[i], options[j]] = [options[j], options[i]];
+                }
+                
+                // 创建选项按钮
+                options.forEach((option, index) => {
+                    const button = document.createElement('div');
+                    button.className = 'option-button';
+                    button.textContent = option;
+                    button.dataset.option = option;
+                    button.addEventListener('click', () => this.selectOption(option));
+                    optionsContainer.appendChild(button);
                 });
             }
 
-            async selectPiece(index) {
-                if (this.isGameWon || this.isFlipping) return;
+
+            async selectOption(selectedOption) {
+                if (this.isGameWon || this.isAnswering) return;
                 
                 // 检查是否已登录
                 if (!this.isLoggedIn) {
@@ -866,127 +872,75 @@
                     this.hasAttemptRecorded = true;
                 }
                 
-                // 如果图片已经被消除或已经翻开，不能选择
-                if (!this.pieceImages[index] || this.flippedCards.includes(index)) return;
-                
-                // 如果已经选中了这张图片，取消选择
-                if (this.selectedPieces.includes(index)) {
-                    this.selectedPieces = this.selectedPieces.filter(i => i !== index);
-                    this.renderPuzzle();
-                    return;
-                }
-                
-                // 如果已经选中了两张图片，先清空选择
-                if (this.selectedPieces.length >= 2) {
-                    this.selectedPieces = [];
-                }
-                
-                // 选择当前图片
-                this.selectedPieces.push(index);
+                this.isAnswering = true;
                 this.moveCount++;
+                this.answeredQuestions++;
                 document.getElementById('moveCount').textContent = this.moveCount;
                 
                 // 首次有效移动时启动计时
                 this.startTimerIfNeeded();
                 
-                this.renderPuzzle();
+                // 检查答案是否正确
+                const isCorrect = selectedOption === this.currentQuestion.correctAnswer;
                 
-                // 如果选中了两张图片，检查是否匹配
-                if (this.selectedPieces.length === 2) {
-                    this.isFlipping = true;
-                    setTimeout(() => this.checkMatch(), 600);
+                // 显示答案结果
+                this.showAnswerResult(selectedOption, isCorrect);
+                
+                if (isCorrect) {
+                    this.correctAnswers++;
+                    document.getElementById('matchedCount').textContent = this.correctAnswers;
                 }
+                
+                // 延迟后生成下一题或结束游戏
+                setTimeout(() => {
+                    this.isAnswering = false;
+                    if (this.correctAnswers >= 6) {
+                        this.checkWin();
+                    } else {
+                        this.generateNewQuestion();
+                    }
+                }, 1500);
             }
 
-            checkMatch() {
-                if (this.selectedPieces.length !== 2) {
-                    this.isFlipping = false;
-                    return;
-                }
-                
-                const [index1, index2] = this.selectedPieces;
-                const image1 = this.pieceImages[index1];
-                const image2 = this.pieceImages[index2];
-                
-                // 检查两张图片是否相同
-                if (image1 === image2) {
-                    // 匹配成功，将这两张卡片标记为已翻开
-                    this.flippedCards.push(index1, index2);
-                    this.matchedPairs++;
-                    
-                    // 更新已配对对数显示
-                    document.getElementById('matchedCount').textContent = this.matchedPairs;
-                    
-                    // 清空选择
-                    this.selectedPieces = [];
-                    this.isFlipping = false;
-                    
-                    // 重新渲染
-                    this.renderPuzzle();
-                    
-                    // 检查是否获胜
-                    this.checkWin();
-                } else {
-                    // 不匹配，延迟后翻回卡片
-                    setTimeout(() => {
-                        this.selectedPieces = [];
-                        this.isFlipping = false;
-                        this.renderPuzzle();
-                    }, 500);
-                }
+            showAnswerResult(selectedOption, isCorrect) {
+                const buttons = document.querySelectorAll('.option-button');
+                buttons.forEach(button => {
+                    button.style.pointerEvents = 'none'; // 禁用点击
+                    if (button.dataset.option === this.currentQuestion.correctAnswer) {
+                        button.classList.add('correct');
+                    } else if (button.dataset.option === selectedOption && !isCorrect) {
+                        button.classList.add('wrong');
+                    }
+                });
             }
+
 
             shufflePuzzle() {
-                // 先重置到初始状态
+                // 重置游戏状态
                 this.resetPuzzle();
-                
-                // 使用Fisher-Yates洗牌算法打乱图片顺序
-                for (let i = this.pieceImages.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [this.pieceImages[i], this.pieceImages[j]] = [this.pieceImages[j], this.pieceImages[i]];
-                }
-                
-                this.moveCount = 0;
-                this.matchedPairs = 0;
-                this.selectedPieces = [];
-                this.flippedCards = [];
-                this.isFlipping = false;
-                document.getElementById('moveCount').textContent = this.moveCount;
-                document.getElementById('matchedCount').textContent = this.matchedPairs;
-                this.isGameWon = false;
-                // 重置计时与流程状态
-                this.resetTimer();
-                this.hasAttemptRecorded = false;
-                this.renderPuzzle();
+                // 生成新题目
+                this.generateNewQuestion();
             }
 
 
             resetPuzzle() {
-                this.pieceImages = [
-                    'pic/1.png', 'pic/2.png', 'pic/3.png', 'pic/4.png',
-                    'pic/5.png', 'pic/6.png', 'pic/7.png', 'pic/8.png',
-                    'pic/1.png', 'pic/2.png', 'pic/3.png', 'pic/4.png',
-                    'pic/5.png', 'pic/6.png', 'pic/7.png', 'pic/8.png'
-                ];
                 this.moveCount = 0;
-                this.matchedPairs = 0;
-                this.selectedPieces = [];
-                this.flippedCards = [];
-                this.isFlipping = false;
-                document.getElementById('moveCount').textContent = this.moveCount;
-                document.getElementById('matchedCount').textContent = this.matchedPairs;
+                this.correctAnswers = 0;
+                this.answeredQuestions = 0;
+                this.isAnswering = false;
+                this.currentQuestion = null;
                 this.isGameWon = false;
+                document.getElementById('moveCount').textContent = this.moveCount;
+                document.getElementById('matchedCount').textContent = this.correctAnswers;
                 // 重置计时显示与流程状态
                 this.resetTimer();
                 this.hasAttemptRecorded = false;
-                this.renderPuzzle();
+                this.createQuestionInterface();
             }
 
             checkWin() {
-                // 检查是否所有8对图片都已配对（flippedCards包含所有16个位置）
-                const isCorrect = this.flippedCards.length === 16;
-                
-                if (isCorrect) {
+                // 检查是否答对了6道题目
+                if (this.correctAnswers >= 6) {
                     this.isGameWon = true;
                     // 停止计时并计算用时
                     this.stopTimer();
@@ -1171,7 +1125,7 @@
                         <div class="leaderboard-item ${rankClass} ${userClass}">
                             <div class="leaderboard-rank">${rank}</div>
                             <div class="leaderboard-user">${data.name} (${userId})</div>
-                            <div class="leaderboard-score">⏱️ ${timeText}｜👣 ${stepsVal}步｜余${remaining}</div>
+                            <div class="leaderboard-score">⏱️ ${timeText}｜📝 ${stepsVal}次｜余${remaining}</div>
                         </div>
                     `;
                 }).join('');
@@ -1545,11 +1499,11 @@
 
         // 初始化游戏
         window.addEventListener('load', () => {
-            game = new PuzzleGame();
+            game = new ColorTrapGame();
         });
 
         // ====== 渲染 Worker 返回的排行榜（独立于 Gist 结构） ======
-        PuzzleGame.prototype.renderLeaderboardFromWorker = function(list) {
+        ColorTrapGame.prototype.renderLeaderboardFromWorker = function(list) {
             try {
                 const leaderboardList = document.getElementById('leaderboardList');
                 const currentBar = document.getElementById('leaderboardCurrentUser');
@@ -1589,7 +1543,7 @@
                         <div class="leaderboard-item ${rankClass} ${userClass}">
                             <div class="leaderboard-rank">${rank}</div>
                             <div class="leaderboard-user">${row.nickname || row.userId || ''}</div>
-                            <div class="leaderboard-score">⏱️ ${timeText}｜👣 ${stepsVal}步｜余${remaining}</div>
+                            <div class="leaderboard-score">⏱️ ${timeText}｜📝 ${stepsVal}次｜余${remaining}</div>
                         </div>
                     `;
                 }).join('');
@@ -1611,7 +1565,7 @@
                                 <div class="leaderboard-item current-user" style="margin:0">
                                     <div class="leaderboard-rank">${myIndex + 1}</div>
                                     <div class="leaderboard-user">${me.nickname || user.姓名} (${user.工号})</div>
-                                    <div class="leaderboard-score">⏱️ ${timeText}｜👣 ${stepsVal}步｜余${remaining}</div>
+                                    <div class="leaderboard-score">⏱️ ${timeText}｜📝 ${stepsVal}次｜余${remaining}</div>
                                 </div>
                             `;
                         } else if (currentBar) {
@@ -1628,3 +1582,4 @@
     </script>
 </body>
 </html>
+

@@ -74,3 +74,4 @@ console.log('2. 更新wrangler.toml中的真实ID');
 console.log('3. 重新部署Worker');
 console.log('4. 部署静态文件到Cloudflare Pages');
 console.log('5. 绑定域名并更新CORS设置');
+
