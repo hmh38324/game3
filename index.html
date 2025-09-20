@@ -131,6 +131,41 @@
             border-color: #da190b;
         }
 
+        .progress-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            width: 0%;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 5px;
+            font-size: 14px;
+            color: #666;
+        }
+
 
         .puzzle-piece {
             width: 100%;
@@ -544,6 +579,10 @@
                 width: 400px;
             }
             
+            .progress-container {
+                max-width: 350px;
+            }
+            
             h1 {
                 font-size: 2em;
             }
@@ -564,6 +603,10 @@
             
             .question-container {
                 width: 320px;
+            }
+            
+            .progress-container {
+                max-width: 280px;
             }
             
             h1 {
@@ -611,8 +654,14 @@
                         <!-- 选项按钮将在这里生成 -->
                     </div>
                 </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill">0/6</div>
+                    </div>
+                    <div class="progress-text">已答对题目进度</div>
+                </div>
                 <div class="score">
-                    <p>答题次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   已答对: <span id="matchedCount">0</span>/6 题   当前用户: <span id="userInfo"></span></p>
+                    <p>答题次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   当前用户: <span id="userInfo"></span></p>
                 </div>
             </div>
             
@@ -888,7 +937,7 @@
                 
                 if (isCorrect) {
                     this.correctAnswers++;
-                    document.getElementById('matchedCount').textContent = this.correctAnswers;
+                    this.updateProgress();
                 }
                 
                 // 延迟后生成下一题或结束游戏
@@ -914,6 +963,13 @@
                 });
             }
 
+            updateProgress() {
+                const progressFill = document.getElementById('progressFill');
+                const percentage = (this.correctAnswers / 6) * 100;
+                progressFill.style.width = `${percentage}%`;
+                progressFill.textContent = `${this.correctAnswers}/6`;
+            }
+
 
             shufflePuzzle() {
                 // 重置游戏状态
@@ -931,7 +987,7 @@
                 this.currentQuestion = null;
                 this.isGameWon = false;
                 document.getElementById('moveCount').textContent = this.moveCount;
-                document.getElementById('matchedCount').textContent = this.correctAnswers;
+                this.updateProgress();
                 // 重置计时显示与流程状态
                 this.resetTimer();
                 this.hasAttemptRecorded = false;
