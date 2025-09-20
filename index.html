@@ -166,6 +166,49 @@
             color: #666;
         }
 
+        .start-button {
+            padding: 20px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            margin: 20px 0;
+        }
+
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .start-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .game-start-screen {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .game-start-screen h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .game-start-screen p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
 
         .puzzle-piece {
             width: 100%;
@@ -635,7 +678,7 @@
     <div class="game-container">
         <h1>🎨 色彩陷阱</h1>
         <div class="game-info">
-            <p>观察有颜色的汉字，选择正确的答案！答对6道题目即可完成游戏！</p>
+            <p>观察有颜色的汉字，选择正确的颜色！答对6道题目即可完成游戏！</p>
         </div>
         
         <div class="controls">
@@ -646,22 +689,33 @@
         
         <div class="game-content">
             <div class="puzzle-section">
-                <div class="question-container" id="questionContainer">
-                    <div class="question-display" id="questionDisplay">
-                        <!-- 题目将在这里显示 -->
-                    </div>
-                    <div class="options-container" id="optionsContainer">
-                        <!-- 选项按钮将在这里生成 -->
-                    </div>
+                <!-- 开始屏幕 -->
+                <div class="game-start-screen" id="gameStartScreen">
+                    <h2>🎨 色彩陷阱游戏</h2>
+                    <p>观察有颜色的汉字，选择正确的颜色！</p>
+                    <p>答对6道题目即可完成游戏！</p>
+                    <button class="start-button" id="startButton" onclick="startGame()">开始游戏</button>
                 </div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progressFill">0/6</div>
+                
+                <!-- 游戏界面 -->
+                <div id="gameInterface" style="display: none;">
+                    <div class="question-container" id="questionContainer">
+                        <div class="question-display" id="questionDisplay">
+                            <!-- 题目将在这里显示 -->
+                        </div>
+                        <div class="options-container" id="optionsContainer">
+                            <!-- 选项按钮将在这里生成 -->
+                        </div>
                     </div>
-                    <div class="progress-text">已答对题目进度</div>
-                </div>
-                <div class="score">
-                    <p>答题次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   当前用户: <span id="userInfo"></span></p>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill">0/6</div>
+                        </div>
+                        <div class="progress-text">已答对题目进度</div>
+                    </div>
+                    <div class="score">
+                        <p>答题次数: <span id="moveCount">0</span>   用时: <span id="elapsedTime">00:00</span>   剩余次数: <span id="remainingAttempts">—</span>   当前用户: <span id="userInfo"></span></p>
+                    </div>
                 </div>
             </div>
             
@@ -810,10 +864,7 @@
             init() {
                 this.createQuestionInterface();
                 this.updateUserInfo();
-                // 首次进入游戏时生成第一道题目
-                setTimeout(() => {
-                    this.generateNewQuestion();
-                }, 500); // 延迟500ms确保界面完全加载
+                this.updateStartButton();
             }
 
             createQuestionInterface() {
@@ -996,6 +1047,10 @@
                 this.resetTimer();
                 this.hasAttemptRecorded = false;
                 this.createQuestionInterface();
+                
+                // 回到开始屏幕
+                document.getElementById('gameStartScreen').style.display = 'block';
+                document.getElementById('gameInterface').style.display = 'none';
             }
 
             checkWin() {
@@ -1029,6 +1084,32 @@
                     userInfoElement.textContent = '未登录';
                     userInfoElement.style.color = '#e74c3c';
                 }
+                this.updateStartButton();
+            }
+
+            updateStartButton() {
+                const startButton = document.getElementById('startButton');
+                if (this.isLoggedIn && this.currentUser) {
+                    startButton.disabled = false;
+                    startButton.textContent = '开始游戏';
+                } else {
+                    startButton.disabled = true;
+                    startButton.textContent = '请先登录';
+                }
+            }
+
+            startGame() {
+                if (!this.isLoggedIn || !this.currentUser) {
+                    alert('请先登录才能开始游戏！');
+                    return;
+                }
+                
+                // 隐藏开始屏幕，显示游戏界面
+                document.getElementById('gameStartScreen').style.display = 'none';
+                document.getElementById('gameInterface').style.display = 'block';
+                
+                // 生成第一道题目
+                this.generateNewQuestion();
             }
 
             validateLogin(employeeId, employeeName) {
@@ -1399,6 +1480,10 @@
 
         function closeLeaderboard() {
             game.closeLeaderboard();
+        }
+
+        function startGame() {
+            game.startGame();
         }
 
         function showSettingsModal() {
