@@ -754,14 +754,15 @@
         const WORKER_BASE_URL = 'https://game3-worker.hmh38324.workers.dev';
         
         // 颜色和汉字选项
-        const COLORS = ['红', '棕', '绿', '黄', '紫', '蓝'];
+        const COLORS = ['红', '棕', '绿', '黄', '紫', '蓝', '粉'];
         const COLOR_VALUES = {
             '红': '#ff0000',
             '棕': '#8B4513',
             '绿': '#008000',
             '黄': '#ffff00',
             '紫': '#800080',
-            '蓝': '#0000ff'
+            '蓝': '#0000ff',
+            '粉': '#ff69b4'
         };
         
         class ColorTrapGame {
@@ -896,6 +897,12 @@
                     button.className = 'option-button';
                     button.textContent = option;
                     button.dataset.option = option;
+                    
+                    // 给选项按钮随机分配颜色
+                    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+                    button.style.color = COLOR_VALUES[randomColor];
+                    button.style.fontWeight = 'bold';
+                    
                     button.addEventListener('click', () => this.selectOption(option));
                     optionsContainer.appendChild(button);
                 });
