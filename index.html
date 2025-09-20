@@ -871,11 +871,10 @@
                         }
                     }
                 } else {
-                    // 颜色和汉字不同：包含正确答案、随机颜色、随机汉字，加一个干扰项
+                    // 颜色和汉字不同：包含正确答案、随机汉字，加两个干扰项
                     options = [
                         this.currentQuestion.correctAnswer, // 正确答案（颜色）
-                        this.currentQuestion.character, // 随机汉字
-                        COLORS[Math.floor(Math.random() * COLORS.length)] // 随机颜色
+                        this.currentQuestion.character // 随机汉字
                     ];
                     while (options.length < 4) {
                         const randomOption = COLORS[Math.floor(Math.random() * COLORS.length)];
