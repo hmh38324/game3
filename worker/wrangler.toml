@@ -1,0 +1,20 @@
+name = "game3-worker"
+main = "src/index.ts"
+compatibility_date = "2025-09-16"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "game3_leaderboard"
+# 部署后使用 `wrangler d1 list` 查到真实 ID 并替换
+database_id = "18e61c5f-addc-4ea1-9255-8dbbe3e46fc0"
+
+[[kv_namespaces]]
+binding = "CACHE"
+# 创建后填入 KV 命名空间 ID
+id = "28e6f63a0f1d4820b8a996864c2abfe0"
+
+[vars]
+# 允许的前端域名（逗号分隔）
+ALLOWED_ORIGINS = "https://game3.biboran.top,https://game3-api.biboran.top,https://game3-worker.hmh38324.workers.dev,https://game3.pages.dev,https://game3-c61.pages.dev"
+
+
