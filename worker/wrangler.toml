@@ -15,6 +15,6 @@ id = "28e6f63a0f1d4820b8a996864c2abfe0"
 
 [vars]
 # 允许的前端域名（逗号分隔）
-ALLOWED_ORIGINS = "https://game3.biboran.top,https://game3-api.biboran.top,https://game3-worker.hmh38324.workers.dev,https://game3.pages.dev,https://game3-c61.pages.dev,https://game3-4e2.pages.dev"
+ALLOWED_ORIGINS = "https://colortrap.biboran.top,https://colortrapapi.biboran.top,https://game3-worker.hmh38324.workers.dev,https://game3.pages.dev,https://game3-c61.pages.dev,https://game3-4e2.pages.dev"
 
 

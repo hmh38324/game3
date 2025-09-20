@@ -41,3 +41,4 @@ echo "6. 更新wrangler.toml中的ALLOWED_ORIGINS"
 echo ""
 echo "🎮 游戏3部署完成！"
 
+
