@@ -696,7 +696,6 @@
         </div>
         
         <div class="controls">
-            <button onclick="resetGame()" id="resetBtn">🔄 重新开始</button>
             <button onclick="showLoginModal()" id="loginBtn">🔐 登录</button>
             <button onclick="logout()" id="logoutBtn" style="display: none;">登出</button>
         </div>
@@ -1177,9 +1176,6 @@
             game.shufflePuzzle();
         }
 
-        function resetGame() {
-            game.resetPuzzle();
-        }
 
         function startGame() {
             // 检查是否已登录
