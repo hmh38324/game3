@@ -618,23 +618,6 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .sync-info {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border: 1px solid #dee2e6;
-        }
-
-        .sync-info p {
-            margin: 8px 0;
-            color: #333;
-        }
-
-        .sync-info strong {
-            color: #495057;
-        }
-
         @media (max-width: 768px) {
             .game-content {
                 flex-direction: column;
@@ -715,7 +698,6 @@
         <div class="controls">
             <button onclick="showLoginModal()" id="loginBtn">🔐 登录</button>
             <button onclick="logout()" id="logoutBtn" style="display: none;">登出</button>
-            <button onclick="showDataSync()" id="syncBtn" style="display: none;">📊 数据同步</button>
         </div>
         
         <!-- 用户信息显示 -->
@@ -790,37 +772,16 @@
         <button onclick="closeWinMessage()">再玩一次</button>
     </div>
 
-    <!-- 数据同步弹窗 -->
-    <div class="login-modal" id="dataSyncModal">
-        <div class="login-content">
-            <h2>📊 数据同步</h2>
-            <div class="sync-info">
-                <p><strong>当前状态：</strong><span id="syncStatus">检查中...</span></p>
-                <p><strong>本地数据：</strong><span id="localDataCount">0</span> 个用户</p>
-                <p><strong>Gist数据：</strong><span id="gistDataCount">0</span> 个用户</p>
-            </div>
-            <div class="form-buttons">
-                <button onclick="syncToGist()">上传到Gist</button>
-                <button onclick="syncFromGist()">从Gist下载</button>
-                <button onclick="clearLocalData()">清空本地数据</button>
-                <button onclick="closeDataSyncModal()">关闭</button>
-            </div>
-            <div class="error-message" id="syncError"></div>
-        </div>
-    </div>
-
     
 
     <script>
         // 简化版本，不需要API
         
-        // Gist数据管理类 - 用于每日限制功能
-        class GistDataManager {
+        // 每日限制数据管理类 - 使用URL参数和localStorage
+        class DailyLimitManager {
             constructor() {
-                // 请替换为你的Gist ID
-                this.gistId = '41df8808263381a20634e627079082b6';
-                this.gistUrl = `https://api.github.com/gists/${this.gistId}`;
                 this.gameId = 'game3'; // 当前游戏ID
+                this.storageKey = 'daily_limit_data';
             }
 
             // 获取中国时区的今天日期
@@ -840,75 +801,35 @@
                 return `${employeeId}_${employeeName}`;
             }
 
-            // 从Gist获取数据
-            async fetchGistData() {
-                try {
-                    const response = await fetch(this.gistUrl);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const gist = await response.json();
-                    const content = gist.files['daily_limit.json']?.content;
-                    const gistData = content ? JSON.parse(content) : { users: {} };
-                    
-                    // 合并localStorage数据（如果Gist数据更新失败时的备用数据）
-                    const localData = this.getLocalStorageData();
-                    if (localData.users && Object.keys(localData.users).length > 0) {
-                        // 合并数据，localStorage数据优先
-                        gistData.users = { ...gistData.users, ...localData.users };
-                    }
-                    
-                    return gistData;
-                } catch (error) {
-                    console.error('获取Gist数据失败:', error);
-                    // 如果Gist获取失败，使用localStorage数据
-                    return this.getLocalStorageData();
-                }
-            }
-
-            // 更新Gist数据 - 由于CORS限制，暂时只使用localStorage
-            async updateGistData(data) {
-                try {
-                    // 由于GitHub Gist的CORS限制，我们暂时只使用localStorage
-                    // 在实际部署时，可以考虑使用服务器端代理或其他解决方案
-                    console.log('由于CORS限制，数据将保存到localStorage');
-                    this.updateLocalStorage(data);
-                    return true;
-                } catch (error) {
-                    console.error('更新数据失败:', error);
-                    this.updateLocalStorage(data);
-                    return false;
-                }
-            }
-
-            // 使用localStorage作为备用存储
-            updateLocalStorage(data) {
-                try {
-                    localStorage.setItem('daily_limit_data', JSON.stringify(data));
-                    console.log('数据已保存到localStorage作为备用');
-                } catch (error) {
-                    console.error('localStorage保存失败:', error);
-                }
-            }
-
             // 从localStorage获取数据
-            getLocalStorageData() {
+            getData() {
                 try {
-                    const data = localStorage.getItem('daily_limit_data');
+                    const data = localStorage.getItem(this.storageKey);
                     return data ? JSON.parse(data) : { users: {} };
                 } catch (error) {
-                    console.error('localStorage读取失败:', error);
+                    console.error('获取本地数据失败:', error);
                     return { users: {} };
                 }
             }
 
+            // 保存数据到localStorage
+            saveData(data) {
+                try {
+                    localStorage.setItem(this.storageKey, JSON.stringify(data));
+                    return true;
+                } catch (error) {
+                    console.error('保存本地数据失败:', error);
+                    return false;
+                }
+            }
+
             // 检查用户今日是否已玩游戏
-            async checkDailyLimit(employeeId, employeeName) {
+            checkDailyLimit(employeeId, employeeName) {
                 const userKey = this.getUserKey(employeeId, employeeName);
                 const today = this.getChinaToday();
                 
                 try {
-                    const data = await this.fetchGistData();
+                    const data = this.getData();
                     const user = data.users[userKey];
                     
                     if (user && user.lastPlayDate === today) {
@@ -928,12 +849,12 @@
             }
 
             // 记录用户今日游戏
-            async recordGamePlay(employeeId, employeeName) {
+            recordGamePlay(employeeId, employeeName) {
                 const userKey = this.getUserKey(employeeId, employeeName);
                 const today = this.getChinaToday();
                 
                 try {
-                    const data = await this.fetchGistData();
+                    const data = this.getData();
                     
                     if (!data.users[userKey]) {
                         data.users[userKey] = {
@@ -946,23 +867,58 @@
                     data.users[userKey].lastPlayDate = today;
                     data.users[userKey].games[this.gameId] = true;
                     
-                    // 先保存到localStorage确保数据不丢失
-                    this.updateLocalStorage(data);
+                    // 保存数据
+                    const success = this.saveData(data);
                     
-                    // 尝试更新Gist
-                    const gistSuccess = await this.updateGistData(data);
+                    // 同时通过URL参数通知其他游戏
+                    this.notifyOtherGames(employeeId, employeeName, today);
                     
-                    if (gistSuccess) {
-                        console.log('游戏记录已同步到Gist');
-                    } else {
-                        console.log('Gist更新失败，数据已保存到本地存储');
-                    }
-                    
-                    // 无论Gist是否成功，都返回true，因为localStorage已经保存了
-                    return true;
+                    return success;
                 } catch (error) {
                     console.error('记录游戏失败:', error);
                     return false;
+                }
+            }
+
+            // 通过URL参数通知其他游戏（跨游戏限制）
+            notifyOtherGames(employeeId, employeeName, today) {
+                // 创建一个隐藏的iframe来通知其他游戏
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = `https://hmh38324.github.io/game1/?notify=played&user=${encodeURIComponent(employeeId + '_' + employeeName)}&date=${today}&game=${this.gameId}`;
+                document.body.appendChild(iframe);
+                
+                // 清理iframe
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1000);
+            }
+
+            // 初始化数据
+            init() {
+                // 检查URL参数，看是否有其他游戏的通知
+                const urlParams = new URLSearchParams(window.location.search);
+                const notify = urlParams.get('notify');
+                const user = urlParams.get('user');
+                const date = urlParams.get('date');
+                const game = urlParams.get('game');
+                
+                if (notify === 'played' && user && date && game) {
+                    // 更新本地数据
+                    const data = this.getData();
+                    if (!data.users[user]) {
+                        data.users[user] = {
+                            lastPlayDate: date,
+                            games: {}
+                        };
+                    }
+                    data.users[user].lastPlayDate = date;
+                    data.users[user].games[game] = true;
+                    this.saveData(data);
+                    
+                    // 清理URL参数
+                    const newUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, newUrl);
                 }
             }
         }
@@ -997,7 +953,7 @@
                 this.currentUser = null; // 当前用户信息
                 this.peopleData = null; // 人员数据缓存
                 // 每日限制功能
-                this.gistManager = new GistDataManager();
+                this.dailyLimitManager = new DailyLimitManager();
                 this.loadPeopleData();
             }
 
@@ -1022,6 +978,8 @@
                 this.createQuestionInterface();
                 this.updateStartButton();
                 this.updateUserInfo();
+                // 初始化每日限制管理器
+                this.dailyLimitManager.init();
             }
 
             createQuestionInterface() {
@@ -1194,7 +1152,7 @@
                 document.getElementById('gameInterface').style.display = 'none';
             }
 
-            async checkWin() {
+            checkWin() {
                 // 检查是否答对了6道题目
                 if (this.correctAnswers >= 6) {
                     this.isGameWon = true;
@@ -1203,7 +1161,7 @@
                     
                     // 记录用户今日已玩游戏
                     if (this.isLoggedIn && this.currentUser) {
-                        await this.gistManager.recordGamePlay(
+                        this.dailyLimitManager.recordGamePlay(
                             this.currentUser.工号, 
                             this.currentUser.姓名
                         );
@@ -1230,10 +1188,10 @@
                 startButton.textContent = '开始游戏';
             }
 
-            async startGame() {
+            startGame() {
                 // 检查每日限制
                 if (this.isLoggedIn && this.currentUser) {
-                    const limitCheck = await this.gistManager.checkDailyLimit(
+                    const limitCheck = this.dailyLimitManager.checkDailyLimit(
                         this.currentUser.工号, 
                         this.currentUser.姓名
                     );
@@ -1343,20 +1301,17 @@
                 const userInfoElement = document.getElementById('userInfo');
                 const loginBtn = document.getElementById('loginBtn');
                 const logoutBtn = document.getElementById('logoutBtn');
-                const syncBtn = document.getElementById('syncBtn');
                 
                 if (this.isLoggedIn && this.currentUser) {
                     userInfoElement.textContent = `${this.currentUser.姓名}(${this.currentUser.工号})`;
                     userInfoElement.style.color = '#4CAF50';
                     loginBtn.style.display = 'none';
                     logoutBtn.style.display = 'inline-block';
-                    syncBtn.style.display = 'inline-block';
                 } else {
                     userInfoElement.textContent = '未登录';
                     userInfoElement.style.color = '#e74c3c';
                     loginBtn.style.display = 'inline-block';
                     logoutBtn.style.display = 'none';
-                    syncBtn.style.display = 'none';
                 }
             }
 
@@ -1394,13 +1349,13 @@
         }
 
 
-        async function startGame() {
+        function startGame() {
             // 检查是否已登录
             if (!game.isLoggedIn) {
                 alert('请先登录才能开始游戏！');
                 return;
             }
-            await game.startGame();
+            game.startGame();
         }
 
         function showLoginModal() {
@@ -1413,93 +1368,6 @@
 
         function closeLoginModal() {
             game.closeLoginModal();
-        }
-
-        // 数据同步相关函数
-        function showDataSync() {
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('dataSyncModal').style.display = 'block';
-            updateSyncInfo();
-        }
-
-        function closeDataSyncModal() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('dataSyncModal').style.display = 'none';
-            document.getElementById('syncError').style.display = 'none';
-        }
-
-        async function updateSyncInfo() {
-            const syncStatus = document.getElementById('syncStatus');
-            const localDataCount = document.getElementById('localDataCount');
-            const gistDataCount = document.getElementById('gistDataCount');
-            
-            try {
-                // 获取本地数据
-                const localData = game.gistManager.getLocalStorageData();
-                localDataCount.textContent = Object.keys(localData.users || {}).length;
-                
-                // 获取Gist数据
-                const gistData = await game.gistManager.fetchGistData();
-                gistDataCount.textContent = Object.keys(gistData.users || {}).length;
-                
-                syncStatus.textContent = '数据检查完成';
-                syncStatus.style.color = '#28a745';
-            } catch (error) {
-                syncStatus.textContent = '数据检查失败';
-                syncStatus.style.color = '#dc3545';
-            }
-        }
-
-        async function syncToGist() {
-            const errorElement = document.getElementById('syncError');
-            errorElement.style.display = 'none';
-            
-            try {
-                const localData = game.gistManager.getLocalStorageData();
-                const success = await game.gistManager.updateGistData(localData);
-                
-                if (success) {
-                    errorElement.textContent = '数据已上传到Gist';
-                    errorElement.style.display = 'block';
-                    errorElement.style.color = '#28a745';
-                    updateSyncInfo();
-                } else {
-                    throw new Error('上传失败');
-                }
-            } catch (error) {
-                errorElement.textContent = '上传失败: ' + error.message;
-                errorElement.style.display = 'block';
-                errorElement.style.color = '#dc3545';
-            }
-        }
-
-        async function syncFromGist() {
-            const errorElement = document.getElementById('syncError');
-            errorElement.style.display = 'none';
-            
-            try {
-                const gistData = await game.gistManager.fetchGistData();
-                game.gistManager.updateLocalStorage(gistData);
-                
-                errorElement.textContent = '数据已从Gist下载';
-                errorElement.style.display = 'block';
-                errorElement.style.color = '#28a745';
-                updateSyncInfo();
-            } catch (error) {
-                errorElement.textContent = '下载失败: ' + error.message;
-                errorElement.style.display = 'block';
-                errorElement.style.color = '#dc3545';
-            }
-        }
-
-        function clearLocalData() {
-            if (confirm('确定要清空所有本地数据吗？此操作不可恢复！')) {
-                localStorage.removeItem('daily_limit_data');
-                document.getElementById('syncError').textContent = '本地数据已清空';
-                document.getElementById('syncError').style.display = 'block';
-                document.getElementById('syncError').style.color = '#ffc107';
-                updateSyncInfo();
-            }
         }
 
         // 登录表单处理

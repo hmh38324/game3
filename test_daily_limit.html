@@ -89,7 +89,6 @@
         
         <div class="config-section">
             <h3>⚙️ 配置</h3>
-            <p><strong>Gist ID:</strong> <input type="text" id="gistId" placeholder="请输入Gist ID" value="YOUR_GIST_ID_HERE"></p>
             <p><strong>游戏ID:</strong> <input type="text" id="gameId" placeholder="请输入游戏ID" value="game3"></p>
             <button onclick="updateConfig()">更新配置</button>
         </div>
@@ -136,17 +135,14 @@
     </div>
 
     <script>
-        // Gist数据管理类（从主游戏复制）
-        class GistDataManager {
+        // 每日限制数据管理类（从主游戏复制）
+        class DailyLimitManager {
             constructor() {
-                this.gistId = 'YOUR_GIST_ID_HERE';
-                this.gistUrl = `https://api.github.com/gists/${this.gistId}`;
                 this.gameId = 'game3';
+                this.storageKey = 'daily_limit_data';
             }
 
-            updateConfig(gistId, gameId) {
-                this.gistId = gistId;
-                this.gistUrl = `https://api.github.com/gists/${this.gistId}`;
+            updateConfig(gameId) {
                 this.gameId = gameId;
             }
 
@@ -165,49 +161,32 @@
                 return `${employeeId}_${employeeName}`;
             }
 
-            async fetchGistData() {
+            getData() {
                 try {
-                    const response = await fetch(this.gistUrl);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const gist = await response.json();
-                    const content = gist.files['daily_limit.json']?.content;
-                    return content ? JSON.parse(content) : { users: {} };
+                    const data = localStorage.getItem(this.storageKey);
+                    return data ? JSON.parse(data) : { users: {} };
                 } catch (error) {
-                    console.error('获取Gist数据失败:', error);
+                    console.error('获取本地数据失败:', error);
                     return { users: {} };
                 }
             }
 
-            async updateGistData(data) {
+            saveData(data) {
                 try {
-                    const response = await fetch(this.gistUrl, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            files: {
-                                'daily_limit.json': {
-                                    content: JSON.stringify(data, null, 2)
-                                }
-                            }
-                        })
-                    });
-                    return response.ok;
+                    localStorage.setItem(this.storageKey, JSON.stringify(data));
+                    return true;
                 } catch (error) {
-                    console.error('更新Gist数据失败:', error);
+                    console.error('保存本地数据失败:', error);
                     return false;
                 }
             }
 
-            async checkDailyLimit(employeeId, employeeName) {
+            checkDailyLimit(employeeId, employeeName) {
                 const userKey = this.getUserKey(employeeId, employeeName);
                 const today = this.getChinaToday();
                 
                 try {
-                    const data = await this.fetchGistData();
+                    const data = this.getData();
                     const user = data.users[userKey];
                     
                     if (user && user.lastPlayDate === today) {
@@ -225,12 +204,12 @@
                 }
             }
 
-            async recordGamePlay(employeeId, employeeName) {
+            recordGamePlay(employeeId, employeeName) {
                 const userKey = this.getUserKey(employeeId, employeeName);
                 const today = this.getChinaToday();
                 
                 try {
-                    const data = await this.fetchGistData();
+                    const data = this.getData();
                     
                     if (!data.users[userKey]) {
                         data.users[userKey] = {
@@ -242,7 +221,7 @@
                     data.users[userKey].lastPlayDate = today;
                     data.users[userKey].games[this.gameId] = true;
                     
-                    const success = await this.updateGistData(data);
+                    const success = this.saveData(data);
                     return success;
                 } catch (error) {
                     console.error('记录游戏失败:', error);
@@ -252,19 +231,18 @@
         }
 
         // 创建管理器实例
-        const manager = new GistDataManager();
+        const manager = new DailyLimitManager();
 
         // 更新配置
         function updateConfig() {
-            const gistId = document.getElementById('gistId').value;
             const gameId = document.getElementById('gameId').value;
             
-            if (gistId === 'YOUR_GIST_ID_HERE' || !gistId) {
-                alert('请输入有效的Gist ID');
+            if (!gameId) {
+                alert('请输入有效的游戏ID');
                 return;
             }
             
-            manager.updateConfig(gistId, gameId);
+            manager.updateConfig(gameId);
             showResult('configResult', '配置已更新', 'success');
         }
 
@@ -318,9 +296,9 @@
         }
 
         // 测试数据获取
-        async function testFetchData() {
+        function testFetchData() {
             try {
-                const data = await manager.fetchGistData();
+                const data = manager.getData();
                 showResult('fetchResult', 
                     `获取数据成功:\n${JSON.stringify(data, null, 2)}`, 
                     'success'
@@ -331,7 +309,7 @@
         }
 
         // 测试游戏记录
-        async function testRecordGame() {
+        function testRecordGame() {
             const employeeId = document.getElementById('testEmployeeId').value;
             const employeeName = document.getElementById('testEmployeeName').value;
             
@@ -341,7 +319,7 @@
             }
             
             try {
-                const success = await manager.recordGamePlay(employeeId, employeeName);
+                const success = manager.recordGamePlay(employeeId, employeeName);
                 showResult('recordResult', 
                     `记录游戏${success ? '成功' : '失败'}`, 
                     success ? 'success' : 'error'
@@ -352,7 +330,7 @@
         }
 
         // 完整流程测试
-        async function testFullFlow() {
+        function testFullFlow() {
             const employeeId = document.getElementById('testEmployeeId').value;
             const employeeName = document.getElementById('testEmployeeName').value;
             
@@ -366,22 +344,22 @@
             try {
                 // 1. 检查限制
                 result += '1. 检查每日限制...\n';
-                const limitCheck = await manager.checkDailyLimit(employeeId, employeeName);
+                const limitCheck = manager.checkDailyLimit(employeeId, employeeName);
                 result += `   结果: ${JSON.stringify(limitCheck)}\n\n`;
                 
                 // 2. 记录游戏
                 result += '2. 记录游戏...\n';
-                const recordSuccess = await manager.recordGamePlay(employeeId, employeeName);
+                const recordSuccess = manager.recordGamePlay(employeeId, employeeName);
                 result += `   结果: ${recordSuccess ? '成功' : '失败'}\n\n`;
                 
                 // 3. 再次检查限制
                 result += '3. 再次检查每日限制...\n';
-                const limitCheck2 = await manager.checkDailyLimit(employeeId, employeeName);
+                const limitCheck2 = manager.checkDailyLimit(employeeId, employeeName);
                 result += `   结果: ${JSON.stringify(limitCheck2)}\n\n`;
                 
                 // 4. 获取最终数据
                 result += '4. 获取最终数据...\n';
-                const finalData = await manager.fetchGistData();
+                const finalData = manager.getData();
                 result += `   结果: 数据已更新\n`;
                 
                 showResult('flowResult', result, 'success');
