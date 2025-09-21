@@ -76,3 +76,4 @@ console.log('4. 部署静态文件到Cloudflare Pages');
 console.log('5. 绑定域名并更新CORS设置');
 
 
+
