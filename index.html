@@ -1064,9 +1064,7 @@
                     button.textContent = option;
                     button.dataset.option = option;
                     
-                    // 给选项按钮随机分配颜色
-                    const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-                    button.style.color = COLOR_VALUES[randomColor];
+                    // 设置按钮样式（不使用随机颜色）
                     button.style.fontWeight = 'bold';
                     
                     button.addEventListener('click', () => this.selectOption(option));
