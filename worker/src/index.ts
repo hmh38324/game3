@@ -133,19 +133,31 @@ export default {
       const key = `attempts:${userId}`;
       const raw = await env.CACHE.get(key);
       let attempts = 0;
+      let lastPlayDate = "";
       if (raw) {
         try {
           const obj = JSON.parse(raw as any);
           attempts = typeof obj.attemptsCount === "number" ? obj.attemptsCount : parseInt(String(obj.attemptsCount || 0), 10);
+          lastPlayDate = obj.lastPlayDate || "";
         } catch {
           attempts = parseInt(raw, 10) || 0;
         }
       }
+
+      // 检查每日限制：获取中国时区的今天日期
+      const now = new Date();
+      const chinaTime = new Date(now.getTime() + (8 * 60 * 60 * 1000)); // UTC+8
+      const today = chinaTime.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      if (lastPlayDate === today) {
+        return json({ ok: false, attemptsCount: attempts, reason: "daily_limit" }, origin, 403);
+      }
+
       if (attempts >= MAX_ATTEMPTS) {
         return json({ ok: false, attemptsCount: attempts, reason: "limit" }, origin, 403);
       }
       attempts += 1;
-      await env.CACHE.put(key, JSON.stringify({ attemptsCount: attempts, nickname }));
+      await env.CACHE.put(key, JSON.stringify({ attemptsCount: attempts, nickname, lastPlayDate: today }));
       return json({ ok: true, attemptsCount: attempts }, origin, 200);
     }
 
@@ -218,7 +230,18 @@ export default {
 
       // Update KV attempts if provided
       if (typeof attemptsCount === "number" && attemptsCount >= 0) {
-        await env.CACHE.put(`attempts:${userId}`, JSON.stringify({ attemptsCount, nickname }), { expirationTtl: undefined }).catch(() => {});
+        // 保持现有的lastPlayDate，如果不存在则设为空
+        const existing = await env.CACHE.get(`attempts:${userId}`);
+        let lastPlayDate = "";
+        if (existing) {
+          try {
+            const obj = JSON.parse(existing as any);
+            lastPlayDate = obj.lastPlayDate || "";
+          } catch {
+            // 忽略解析错误
+          }
+        }
+        await env.CACHE.put(`attempts:${userId}`, JSON.stringify({ attemptsCount, nickname, lastPlayDate }), { expirationTtl: undefined }).catch(() => {});
       }
 
       // Replace user's score: delete existing rows then insert a new one
