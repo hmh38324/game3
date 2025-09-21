@@ -604,6 +604,22 @@
             border: 1px solid #ffeaa7;
         }
 
+        .daily-limit-warning {
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .daily-limit-warning span {
+            font-size: 14px;
+            font-weight: bold;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            box-shadow: 0 2px 10px rgba(255, 107, 107, 0.3);
+            display: inline-block;
+        }
+
         .user-info {
             margin: 10px 0;
             text-align: center;
@@ -698,6 +714,11 @@
         <div class="controls">
             <button onclick="showLoginModal()" id="loginBtn">🔐 登录</button>
             <button onclick="logout()" id="logoutBtn" style="display: none;">登出</button>
+        </div>
+        
+        <!-- 每日限制提示 -->
+        <div class="daily-limit-warning">
+            <span>⚠️ 每日限制：每个用户每天只能玩一次游戏，明天00:00后可以重新开始</span>
         </div>
         
         <!-- 用户信息显示 -->
