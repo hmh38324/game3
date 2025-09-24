@@ -218,6 +218,11 @@
 
         .controls {
             margin-bottom: 20px;
+            display: flex;
+            width: 100%;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
         }
 
         button {
@@ -232,6 +237,14 @@
             font-weight: bold;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 顶部三个按钮在一行显示并平均分配宽度 */
+        .controls button {
+            margin: 0; /* 使用容器 gap 控制间距，避免换行 */
+            flex: 1 1 0;
+            min-width: 0; /* 允许收缩避免溢出 */
+            white-space: nowrap; /* 文案不换行 */
         }
 
         button:hover {
@@ -591,6 +604,16 @@
                 max-width: 100%;
                 padding: 20px;
             }
+
+            /* 中屏时按钮略微缩小，仍占满一行 */
+            .controls {
+                gap: 8px;
+            }
+            .controls button {
+                padding: 10px 16px;
+                font-size: 14px;
+                border-radius: 22px;
+            }
         }
 
         @media (max-width: 480px) {
@@ -627,6 +650,16 @@
             .win-message p {
                 font-size: 14px;
                 margin-bottom: 15px;
+            }
+
+            /* 小屏时进一步优化按钮尺寸与间距，保持一行显示 */
+            .controls {
+                gap: 6px;
+            }
+            .controls button {
+                padding: 9px 12px;
+                font-size: 13px;
+                border-radius: 20px;
             }
         }
     </style>
